@@ -8,11 +8,34 @@
   </head>
   <body>
     <h1>Cube Gen 3</h1>
-    <section class="img-sec"></section>
-    <section class="bottom-sec"></section>
+    <section class="img-sec">
+      <div
+        class="progress-container"
+        style="width: 100%; background-color: #ddd; display: none"
+      >
+        <div
+          id="progress-bar"
+          style="
+            width: 0%;
+            height: 20px;
+            background-color: green;
+            text-align: center;
+            color: white;
+          "
+        >
+          0%
+        </div>
+      </div>
+      <img
+        id="generated-img"
+        src=""
+        alt="Generated Image"
+        style="display: none; max-width: 100%"
+      />
+    </section>
     <div class="input-sec">
       <input type="text" placeholder="Enter a prompt..." />
-      <button id="submit-btn">Generate</button>
+      <button id="submit-btn" type="button">Generate</button>
     </div>
     <script src="app.js"></script>
   </body>
