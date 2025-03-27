@@ -11,58 +11,58 @@ document
       return;
     }
 
-    // Show loading bar
-    progressBar.style.width = "0%"; // Reset progress bar
-    progressBar.parentElement.style.display = "block"; // Show progress bar
-
-    const eventSource = new EventSource("http://localhost:8000/generate/");
-
-    function updateProgressBar() {
-      let width = 0;
-      const interval = setInterval(() => {
-        if (width >= 100) {
-          clearInterval(interval);
-        } else {
-          width += 5; // Increase progress by 5% every 200ms
-          progressBar.style.width = width + "%";
-        }
-      }, 200);
-    }
+    // Reset UI
+    progressBar.style.width = "0%";
+    progressContainer.style.display = "block";
+    generatedImg.style.display = "none"; // Hide old image
 
     try {
-      updateProgressBar(); // Start animation
-
-      // Send request to generate an image
-      await fetch("http://localhost:8000/generate/", {
+      const response = await fetch("http://localhost:8000/generate/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt }),
       });
 
-      inputField.value = ""; // Clear input
+      if (!response.body) {
+        throw new Error("No response body received");
+      }
 
-      // Wait 2 seconds before fetching the latest image
-      setTimeout(async () => {
-        const latestResponse = await fetch(
-          "http://localhost:8000/latest-image/"
-        );
-        const latestData = await latestResponse.json();
+      const reader = response.body.getReader();
+      let decoder = new TextDecoder();
+      let imageUrl = null;
 
-        if (latestResponse.ok) {
-          generatedImg.src = `http://localhost:8000${latestData.image_url}`;
-          generatedImg.style.display = "block";
-        } else {
-          console.error("Error fetching latest image:", latestData.error);
-          alert("Failed to retrieve latest image.");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const progressMatch = chunk.match(/data: (\d+),?\s?(.*)?/);
+
+        if (progressMatch) {
+          let progress = parseInt(progressMatch[1], 10);
+          progressBar.style.width = progress + "%";
+
+          if (progress === 100 && progressMatch[2]) {
+            imageUrl = progressMatch[2].trim(); // Extract the image URL
+          }
         }
+      }
 
-        // Hide progress bar after completion
-        progressBar.style.width = "100%";
-        setTimeout(() => (progressContainer.style.display = "none"), 500);
-      }, 2000);
+      if (imageUrl) {
+        // Force refresh by appending timestamp
+        generatedImg.src = `http://localhost:8000${imageUrl}?t=${new Date().getTime()}`;
+        generatedImg.style.display = "block";
+      } else {
+        alert("Failed to retrieve image URL.");
+      }
+
+      // Hide progress bar after completion
+      setTimeout(() => {
+        progressContainer.style.display = "none";
+      }, 500);
     } catch (error) {
       console.error("Error:", error);
       alert("Image generation failed. Check server logs.");
-      progressContainer.style.display = "none"; // Hide progress bar on error
+      progressContainer.style.display = "none";
     }
   });
